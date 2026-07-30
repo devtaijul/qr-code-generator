@@ -2,20 +2,20 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import QRCode from "qrcode";
-import { 
-  Download, 
-  Link as LinkIcon, 
-  Palette, 
-  Upload, 
-  Trash2, 
-  Copy, 
-  Check, 
-  ExternalLink, 
-  QrCode, 
-  Sliders, 
+import {
+  Download,
+  Link as LinkIcon,
+  Palette,
+  Upload,
+  Trash2,
+  Copy,
+  Check,
+  ExternalLink,
+  QrCode,
+  Sliders,
   Info,
   Maximize2,
-  RefreshCw
+  RefreshCw,
 } from "lucide-react";
 
 // Color presets
@@ -37,7 +37,9 @@ const BG_COLORS = [
 
 export default function Home() {
   const [url, setUrl] = useState("https://github.com/google/antigravity");
-  const [inputVal, setInputVal] = useState("https://github.com/google/antigravity");
+  const [inputVal, setInputVal] = useState(
+    "https://github.com/google/antigravity",
+  );
   const [fgColor, setFgColor] = useState("#171717");
   const [bgColor, setBgColor] = useState("#ffffff");
   const [margin, setMargin] = useState(2);
@@ -45,6 +47,9 @@ export default function Home() {
   const [format, setFormat] = useState<"png" | "jpeg" | "svg">("png");
   const [logo, setLogo] = useState<string | null>(null);
   const [logoName, setLogoName] = useState<string>("");
+  const [logoShape, setLogoShape] = useState<"circle" | "rounded" | "square">(
+    "circle",
+  );
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [isValidUrl, setIsValidUrl] = useState(true);
@@ -65,7 +70,7 @@ export default function Home() {
           }
         }
         setUrl(formattedUrl);
-        
+
         // Basic URL validation
         try {
           new URL(formattedUrl);
@@ -86,7 +91,7 @@ export default function Home() {
   const renderQRCode = useCallback(() => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
-    
+
     if (!url) {
       const ctx = canvas.getContext("2d");
       if (ctx) {
@@ -122,11 +127,22 @@ export default function Home() {
         img.src = logo;
         img.onload = () => {
           // The logo should occupy around 20% of the canvas width
-          const logoSize = canvas.width * 0.20;
+          const logoSize = canvas.width * 0.2;
           const x = (canvas.width - logoSize) / 2;
           const y = (canvas.height - logoSize) / 2;
           const padding = 6;
-          const cornerRadius = logoSize * 0.22;
+          const cornerRadius =
+            logoShape === "circle"
+              ? logoSize / 2
+              : logoShape === "rounded"
+                ? logoSize * 0.2
+                : 0;
+          const bgRadius =
+            logoShape === "circle"
+              ? (logoSize + padding * 2) / 2
+              : logoShape === "rounded"
+                ? (logoSize + padding * 2) * 0.2
+                : 0;
 
           ctx.save();
 
@@ -134,9 +150,20 @@ export default function Home() {
           ctx.fillStyle = bgColor === "transparent" ? "#ffffff" : bgColor;
           ctx.beginPath();
           if (ctx.roundRect) {
-            ctx.roundRect(x - padding, y - padding, logoSize + padding * 2, logoSize + padding * 2, cornerRadius + 2);
+            ctx.roundRect(
+              x - padding,
+              y - padding,
+              logoSize + padding * 2,
+              logoSize + padding * 2,
+              bgRadius,
+            );
           } else {
-            ctx.rect(x - padding, y - padding, logoSize + padding * 2, logoSize + padding * 2);
+            ctx.rect(
+              x - padding,
+              y - padding,
+              logoSize + padding * 2,
+              logoSize + padding * 2,
+            );
           }
           ctx.fill();
 
@@ -159,7 +186,7 @@ export default function Home() {
         };
       }
     });
-  }, [url, fgColor, bgColor, margin, size, logo]);
+  }, [url, fgColor, bgColor, margin, size, logo, logoShape]);
 
   // Re-run rendering whenever states change
   useEffect(() => {
@@ -209,17 +236,28 @@ export default function Home() {
 
         // Inject logo into the generated SVG if it exists
         if (logo) {
-          const logoSize = size * 0.20;
+          const logoSize = size * 0.2;
           const x = (size - logoSize) / 2;
           const y = (size - logoSize) / 2;
-          const radius = logoSize * 0.22;
+          const radius =
+            logoShape === "circle"
+              ? logoSize / 2
+              : logoShape === "rounded"
+                ? logoSize * 0.2
+                : 0;
+          const bgRadius =
+            logoShape === "circle"
+              ? (logoSize + 12) / 2
+              : logoShape === "rounded"
+                ? (logoSize + 12) * 0.2
+                : 0;
 
           const logoSvgOverlay = `
             <g id="logo-overlay-container">
               <!-- Mask background -->
-              <rect x="${x - 6}" y="${y - 6}" width="${logoSize + 12}" height="${logoSize + 12}" fill="${bgColor === "transparent" ? "#ffffff" : bgColor}" rx="${radius + 2}" ry="${radius + 2}" />
+              <rect x="${x - 6}" y="${y - 6}" width="${logoSize + 12}" height="${logoSize + 12}" fill="${bgColor === "transparent" ? "#ffffff" : bgColor}" rx="${bgRadius}" ry="${bgRadius}" />
               <!-- Border ring -->
-              <rect x="${x - 6}" y="${y - 6}" width="${logoSize + 12}" height="${logoSize + 12}" fill="none" stroke="${fgColor}" stroke-width="2" rx="${radius + 2}" ry="${radius + 2}" />
+              <rect x="${x - 6}" y="${y - 6}" width="${logoSize + 12}" height="${logoSize + 12}" fill="none" stroke="${fgColor}" stroke-width="2" rx="${bgRadius}" ry="${bgRadius}" />
               <!-- Clip path for image -->
               <clipPath id="logo-clip-path">
                 <rect x="${x}" y="${y}" width="${logoSize}" height="${logoSize}" rx="${radius}" ry="${radius}" />
@@ -287,7 +325,10 @@ export default function Home() {
         setTimeout(() => setCopied(false), 2000);
       }, "image/png");
     } catch (err) {
-      console.warn("Failed to copy canvas as image, copying text URL as fallback:", err);
+      console.warn(
+        "Failed to copy canvas as image, copying text URL as fallback:",
+        err,
+      );
       try {
         await navigator.clipboard.writeText(url);
         setCopied(true);
@@ -300,7 +341,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-900 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(99,102,241,0.25),rgba(255,255,255,0))] text-slate-100 flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white">
-      
       {/* Header */}
       <header className="border-b border-slate-800 bg-slate-950/40 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -310,30 +350,34 @@ export default function Home() {
             </div>
             <div>
               <h1 className="font-bold text-lg bg-gradient-to-r from-indigo-200 via-indigo-400 to-indigo-200 bg-clip-text text-transparent">
-                AURA QR
+                DEVTAIJUL QR
               </h1>
-              <p className="text-[10px] text-slate-400 tracking-wider font-semibold uppercase">QR Code Generator</p>
+              <p className="text-[10px] text-slate-400 tracking-wider font-semibold uppercase">
+                QR Code Generator
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-4 text-sm text-slate-400">
-            <span className="hidden md:inline">High Resolution • Embedded Logo Support</span>
+            <span className="hidden md:inline">
+              High Resolution • Embedded Logo Support
+            </span>
           </div>
         </div>
       </header>
 
       {/* Main Workspace */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8 lg:py-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
         {/* Left Side: Customization Form (7 cols) */}
         <section className="lg:col-span-7 flex flex-col gap-6">
-          
           {/* Card: URL Input */}
           <div className="bg-slate-950/40 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-xl shadow-xl flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <LinkIcon className="h-5 w-5 text-indigo-400" />
-              <h2 className="font-semibold text-base text-slate-200">1. Enter Website Link</h2>
+              <h2 className="font-semibold text-base text-slate-200">
+                1. Enter Website Link
+              </h2>
             </div>
-            
+
             <div className="relative">
               <input
                 type="text"
@@ -341,15 +385,18 @@ export default function Home() {
                 onChange={(e) => setInputVal(e.target.value)}
                 placeholder="Enter URL (e.g., google.com or https://yourpage.com)"
                 className={`w-full bg-slate-900/80 border ${
-                  !isValidUrl && inputVal.trim() !== "" 
-                    ? "border-rose-500/50 focus:border-rose-500 focus:ring-rose-500/20" 
+                  !isValidUrl && inputVal.trim() !== ""
+                    ? "border-rose-500/50 focus:border-rose-500 focus:ring-rose-500/20"
                     : "border-slate-700/80 focus:border-indigo-500 focus:ring-indigo-500/20"
                 } rounded-xl px-4 py-3.5 pr-10 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-4 transition duration-200 text-sm`}
               />
               <div className="absolute right-3.5 top-3.5 flex items-center gap-2">
                 {inputVal && (
-                  <button 
-                    onClick={() => { setInputVal(""); setUrl(""); }}
+                  <button
+                    onClick={() => {
+                      setInputVal("");
+                      setUrl("");
+                    }}
                     className="text-slate-500 hover:text-slate-300 transition p-0.5 rounded-full hover:bg-slate-800"
                     title="Clear Input"
                   >
@@ -371,7 +418,8 @@ export default function Home() {
                   </span>
                 ) : (
                   <span className="text-rose-400 flex items-center gap-1">
-                    <Info className="h-3 w-3" /> Input format is invalid or incomplete
+                    <Info className="h-3 w-3" /> Input format is invalid or
+                    incomplete
                   </span>
                 )}
               </div>
@@ -380,18 +428,20 @@ export default function Home() {
 
           {/* Card: Appearance Customization */}
           <div className="bg-slate-950/40 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-xl shadow-xl flex flex-col gap-6">
-            
             <div className="flex items-center gap-2 border-b border-slate-800/60 pb-4">
               <Palette className="h-5 w-5 text-indigo-400" />
-              <h2 className="font-semibold text-base text-slate-200">2. Customize Styling</h2>
+              <h2 className="font-semibold text-base text-slate-200">
+                2. Customize Styling
+              </h2>
             </div>
 
             {/* Sub-section: Colors */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
               {/* Foreground Color Picker */}
               <div className="flex flex-col gap-3">
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">QR Code Color</label>
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  QR Code Color
+                </label>
                 <div className="flex flex-wrap gap-2">
                   {FG_COLORS.map((color) => (
                     <button
@@ -419,29 +469,41 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[11px] text-slate-400 font-mono">Hex: {fgColor.toUpperCase()}</span>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    Hex: {fgColor.toUpperCase()}
+                  </span>
                 </div>
               </div>
 
               {/* Background Color Picker */}
               <div className="flex flex-col gap-3">
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Background Color</label>
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  Background Color
+                </label>
                 <div className="flex flex-wrap gap-2">
                   {BG_COLORS.map((color) => (
                     <button
                       key={color.value}
                       onClick={() => setBgColor(color.value)}
                       className="w-8 h-8 rounded-full border border-slate-700/85 relative transition-transform hover:scale-110 active:scale-95 overflow-hidden cursor-pointer"
-                      style={{ 
-                        backgroundColor: color.value === "transparent" ? "#000000" : color.value,
-                        backgroundImage: color.value === "transparent" ? "linear-gradient(45deg, #1e293b 25%, transparent 25%), linear-gradient(-45deg, #1e293b 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #1e293b 75%), linear-gradient(-45deg, transparent 75%, #1e293b 75%)" : "none",
-                        backgroundSize: "8px 8px"
+                      style={{
+                        backgroundColor:
+                          color.value === "transparent"
+                            ? "#000000"
+                            : color.value,
+                        backgroundImage:
+                          color.value === "transparent"
+                            ? "linear-gradient(45deg, #1e293b 25%, transparent 25%), linear-gradient(-45deg, #1e293b 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #1e293b 75%), linear-gradient(-45deg, transparent 75%, #1e293b 75%)"
+                            : "none",
+                        backgroundSize: "8px 8px",
                       }}
                       title={color.name}
                     >
                       {bgColor === color.value && (
                         <span className="absolute inset-0 flex items-center justify-center bg-black/10 rounded-full">
-                          <Check className={`h-4 w-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] ${bgColor === "#ffffff" || bgColor === "#f8fafc" || bgColor === "#fffbeb" ? "text-slate-900" : "text-white"}`} />
+                          <Check
+                            className={`h-4 w-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] ${bgColor === "#ffffff" || bgColor === "#f8fafc" || bgColor === "#fffbeb" ? "text-slate-900" : "text-white"}`}
+                          />
                         </span>
                       )}
                     </button>
@@ -458,21 +520,26 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-[11px] text-slate-400 font-mono">
-                    Mode: {bgColor === "transparent" ? "Transparent" : bgColor.toUpperCase()}
+                    Mode:{" "}
+                    {bgColor === "transparent"
+                      ? "Transparent"
+                      : bgColor.toUpperCase()}
                   </span>
                 </div>
               </div>
-
             </div>
 
             {/* Sub-section: Layout Configurations */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-800/40 pt-6">
-              
               {/* Margin Selector */}
               <div className="flex flex-col gap-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Quiet Zone (Margin)</label>
-                  <span className="text-xs text-indigo-400 font-medium">{margin} modules</span>
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    Quiet Zone (Margin)
+                  </label>
+                  <span className="text-xs text-indigo-400 font-medium">
+                    {margin} modules
+                  </span>
                 </div>
                 <div className="flex gap-2">
                   {[0, 1, 2, 4].map((m) => (
@@ -480,12 +547,18 @@ export default function Home() {
                       key={m}
                       onClick={() => setMargin(m)}
                       className={`flex-1 py-1.5 px-3 rounded-lg border text-xs font-medium cursor-pointer transition duration-150 ${
-                        margin === m 
-                          ? "bg-indigo-600/20 border-indigo-500/80 text-indigo-300" 
+                        margin === m
+                          ? "bg-indigo-600/20 border-indigo-500/80 text-indigo-300"
                           : "bg-slate-900 border-slate-700/50 text-slate-400 hover:border-slate-600 hover:text-slate-200"
                       }`}
                     >
-                      {m === 0 ? "None" : m === 1 ? "Tight" : m === 2 ? "Normal" : "Wide"}
+                      {m === 0
+                        ? "None"
+                        : m === 1
+                          ? "Tight"
+                          : m === 2
+                            ? "Normal"
+                            : "Wide"}
                     </button>
                   ))}
                 </div>
@@ -494,8 +567,12 @@ export default function Home() {
               {/* High-Res Download Resolution */}
               <div className="flex flex-col gap-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Download Size</label>
-                  <span className="text-xs text-indigo-400 font-medium">{size} × {size} px</span>
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    Download Size
+                  </label>
+                  <span className="text-xs text-indigo-400 font-medium">
+                    {size} × {size} px
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -508,18 +585,21 @@ export default function Home() {
                 />
                 <div className="flex justify-between text-[10px] text-slate-500">
                   <span>Standard (256px)</span>
-                  <span className="text-slate-400 font-medium">Print Quality ({size >= 512 ? "Excellent" : "Good"})</span>
+                  <span className="text-slate-400 font-medium">
+                    Print Quality ({size >= 512 ? "Excellent" : "Good"})
+                  </span>
                   <span>Ultra-HD (1024px)</span>
                 </div>
               </div>
-
             </div>
 
             {/* Sub-section: Logo Branding */}
             <div className="border-t border-slate-800/40 pt-6 flex flex-col gap-4">
               <div className="flex items-center gap-2">
                 <Sliders className="h-4 w-4 text-indigo-400" />
-                <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Logo Customization (Optional)</h3>
+                <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                  Logo Customization (Optional)
+                </h3>
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -537,7 +617,9 @@ export default function Home() {
                     className="flex items-center justify-center gap-2 w-full bg-slate-900 border border-dashed border-slate-700 hover:border-indigo-500 rounded-xl px-4 py-3 cursor-pointer text-xs font-medium text-slate-400 hover:text-slate-200 transition duration-150"
                   >
                     <Upload className="h-4 w-4 text-slate-400" />
-                    {logoName ? `Change: ${logoName.slice(0, 15)}...` : "Upload Center Logo (PNG/JPG)"}
+                    {logoName
+                      ? `Change: ${logoName.slice(0, 15)}...`
+                      : "Upload Center Logo (PNG/JPG)"}
                   </label>
                 </div>
 
@@ -553,31 +635,56 @@ export default function Home() {
               </div>
 
               {logo && (
+                <div className="flex flex-col gap-2.5 animate-fadeIn">
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    Logo Shape
+                  </label>
+                  <div className="flex gap-2 w-full max-w-[280px]">
+                    {(["circle", "rounded", "square"] as const).map((shape) => (
+                      <button
+                        key={shape}
+                        type="button"
+                        onClick={() => setLogoShape(shape)}
+                        className={`flex-1 py-1.5 px-2.5 rounded-lg border text-xs font-medium cursor-pointer transition duration-150 capitalize ${
+                          logoShape === shape
+                            ? "bg-indigo-600/20 border-indigo-500/80 text-indigo-300"
+                            : "bg-slate-900 border-slate-700/50 text-slate-400 hover:border-slate-600 hover:text-slate-200"
+                        }`}
+                      >
+                        {shape === "rounded" ? "Rounded" : shape}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {logo && (
                 <div className="bg-indigo-950/20 border border-indigo-900/30 rounded-xl p-3 flex items-start gap-2.5 text-xs text-indigo-300 animate-fadeIn">
                   <Info className="h-4 w-4 shrink-0 text-indigo-400 mt-0.5" />
                   <p>
-                    Adding a logo automatically increases the QR Code error correction level to <strong>High (30% recovery)</strong>. This guarantees your code remains fully readable when scanned.
+                    Adding a logo automatically increases the QR Code error
+                    correction level to <strong>High (30% recovery)</strong>.
+                    This guarantees your code remains fully readable when
+                    scanned.
                   </p>
                 </div>
               )}
             </div>
-
           </div>
-
         </section>
 
         {/* Right Side: Preview & Download Card (5 cols) */}
         <section className="lg:col-span-5 flex flex-col gap-6 sticky top-24">
-          
           {/* Card Container */}
           <div className="bg-slate-950/60 border border-slate-800 rounded-3xl p-6 backdrop-blur-xl shadow-2xl flex flex-col items-center gap-6 relative overflow-hidden group">
-            
             {/* Visual background ambient glow inside the card */}
             <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition duration-500"></div>
 
             <div className="w-full flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400 tracking-widest uppercase">Live Output</span>
-              
+              <span className="text-xs font-bold text-slate-400 tracking-widest uppercase">
+                Live Output
+              </span>
+
               <div className="flex items-center gap-1.5 bg-slate-900/80 border border-slate-800 px-2.5 py-1 rounded-full text-xs text-indigo-400 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 Interactive
@@ -586,7 +693,6 @@ export default function Home() {
 
             {/* QR Code Canvas container wrapper */}
             <div className="w-full max-w-[280px] aspect-square bg-slate-900 rounded-2xl border border-slate-800/80 p-5 flex items-center justify-center relative group/qr shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)]">
-              
               {/* Corner target decorators simulating a scan frame */}
               <div className="absolute top-3 left-3 w-4 h-4 border-t-2 border-l-2 border-slate-600 rounded-tl-md group-hover/qr:border-indigo-400 transition"></div>
               <div className="absolute top-3 right-3 w-4 h-4 border-t-2 border-r-2 border-slate-600 rounded-tr-md group-hover/qr:border-indigo-400 transition"></div>
@@ -594,11 +700,11 @@ export default function Home() {
               <div className="absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-slate-600 rounded-br-md group-hover/qr:border-indigo-400 transition"></div>
 
               {/* The actual rendering canvas */}
-              <canvas 
+              <canvas
                 ref={canvasRef}
                 className="w-full h-full object-contain rounded-lg drop-shadow-md select-none transition-transform duration-300"
-                style={{ 
-                  maxWidth: "240px", 
+                style={{
+                  maxWidth: "240px",
                   maxHeight: "240px",
                 }}
               />
@@ -606,7 +712,9 @@ export default function Home() {
               {!url && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 rounded-2xl p-4 text-center">
                   <Maximize2 className="h-8 w-8 text-slate-500 mb-2 animate-bounce" />
-                  <p className="text-xs text-slate-400">Waiting for website link...</p>
+                  <p className="text-xs text-slate-400">
+                    Waiting for website link...
+                  </p>
                 </div>
               )}
             </div>
@@ -614,8 +722,10 @@ export default function Home() {
             {/* Simulated Live Action Link */}
             {url && (
               <div className="w-full text-center flex flex-col gap-1 items-center bg-slate-900/40 border border-slate-800/50 p-3 rounded-xl">
-                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Destination URL</span>
-                <a 
+                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                  Destination URL
+                </span>
+                <a
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -629,7 +739,9 @@ export default function Home() {
 
             {/* Format Selector Tab */}
             <div className="w-full flex flex-col gap-2">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left pl-1">Download Format</label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left pl-1">
+                Download Format
+              </label>
               <div className="bg-slate-900 border border-slate-800 p-1 rounded-xl flex gap-1">
                 {(["png", "jpeg", "svg"] as const).map((fmt) => (
                   <button
@@ -649,7 +761,6 @@ export default function Home() {
 
             {/* Action Buttons Grid */}
             <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3">
-              
               <button
                 disabled={!url}
                 onClick={copyToClipboard}
@@ -685,18 +796,14 @@ export default function Home() {
                   </>
                 )}
               </button>
-
             </div>
 
             <div className="w-full text-center flex items-center justify-center gap-1.5 text-[11px] text-slate-500 mt-1">
               <Info className="h-3.5 w-3.5" />
               <span>Scan test with any mobile phone camera.</span>
             </div>
-
           </div>
-
         </section>
-
       </main>
 
       {/* Footer */}
@@ -704,13 +811,16 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
           <p>© 2026 Aura QR Generator. All rights reserved.</p>
           <div className="flex gap-4">
-            <span className="hover:text-slate-400 transition cursor-help">Security Inspected</span>
+            <span className="hover:text-slate-400 transition cursor-help">
+              Security Inspected
+            </span>
             <span>•</span>
-            <span className="hover:text-slate-400 transition cursor-help">High Density Vector</span>
+            <span className="hover:text-slate-400 transition cursor-help">
+              High Density Vector
+            </span>
           </div>
         </div>
       </footer>
-
     </div>
   );
 }
